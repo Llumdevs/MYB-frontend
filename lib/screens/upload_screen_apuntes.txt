@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+
+class UploadScreen extends StatelessWidget { //definimos el widget con class y le decimos el estado
+  const UploadScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) { //aquí empieza a pintar la pantalla
+    return Scaffold( //scaffold es el esqueleto básico de cualquier pantalla móvil/web
+      appBar: AppBar(
+        title: const Text('Mind Your Business'), //pongo const cuando quiero que lo guarde porque no va a cambiar
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [ //Una lista [] de cosas que van a la derecha del todo
+          IconButton(onPressed: () {}, icon: const Icon(Icons.help_outline))
+        ],
+      ),
+      // Body es el cuerpo de la página
+      body: Center( //center coge el child y lo pone en el centro
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,//todos los elementos en el centro vertical
+          children: [ //Aquí es donde definimos qué se ve realmente
+            const Icon(Icons.cloud_upload_outlined, size: 100, color: Colors.purple),
+            const SizedBox(height: 20), 
+            const Text(
+              "Arrastra tu nómina aquí",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10), //como un padding o margin entre elementos
+            const Text("o haz clic para buscarla"),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: () {
+                print("Botón pulsado");
+              },
+              icon: const Icon(Icons.search),
+              label: const Text("Analizar mi Nómina"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
