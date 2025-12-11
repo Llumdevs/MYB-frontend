@@ -21,7 +21,7 @@ class _UploadScreenState extends State<UploadScreen>{
     //abrimos ventana de archivos
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf'],
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
     );
 
     if (result != null) {
