@@ -1,105 +1,164 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:fl_chart/fl_chart.dart'; // Asegúrate de tener esta librería
 
-class ResultsScreen extends StatelessWidget{
-  //aqui guardamos el JSON que nos manda la pantalla anterior
+class ResultsScreen extends StatelessWidget {
   final Map<String, dynamic> analysisData;
-  //obligamos a quien llame a esta pantalla a que nos de los datos.
-  //required this.analysisData es rollo "no me crees si no me das el dato"
+
   const ResultsScreen({super.key, required this.analysisData});
 
   @override
   Widget build(BuildContext context) {
-    // Sacamos los datos del mapa para usarlos fácil
+    // 1. Extracción y Limpieza de Datos
     final double bruto = (analysisData['salario_bruto'] ?? 0.0).toDouble();
     final double neto = (analysisData['salario_neto'] ?? 0.0).toDouble();
-    final String resumen = analysisData['resumen'] ?? "Sin resumen";
+    final String resumen = analysisData['resumen'] ?? "Sin resumen disponible.";
     final List<dynamic> consejos = analysisData['consejos'] ?? [];
 
-    // Calculamos el tajazo del estado (Impuestos y deducciones)
-    // Si el neto es mayor que el bruto por error, ponemos impuestos a 0 para que no explote.
+    // Cálculo de impuestos para la gráfica (evitamos negativos)
     double impuestos = (bruto > neto) ? (bruto - neto) : 0.0;
+
+    // Colores del tema (los sacamos del contexto para ser consistentes)
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tu Dinero Explicado'),
-        backgroundColor: Colors.green,
+        title: const Text("Tu Dinero Explicado"),
+        // No ponemos color aquí, dejamos que el tema global (main.dart) se encargue
       ),
-      body: SingleChildScrollView( //para que vaya expandiendo segun entren elementos
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- SECCIÓN 1: EL GRÁFICO ---
-            const Text(
-              "¿Dónde va tu dinero?",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
             
-            // Contenedor del gráfico (le damos altura fija para que se vea bien)
-            SizedBox(
-              height: 200, 
-              child: PieChart(
-                PieChartData(
-                  sections: [
-                    // SECCIÓN A: Lo que te llevas (NETO)
-                    PieChartSectionData(
-                      value: neto,
-                      color: Colors.green,
-                      title: 'Tú\n${neto.toStringAsFixed(0)}€',
-                      radius: 60,
-                      titleStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    // SECCIÓN B: Lo que pagas (IMPUESTOS)
-                    PieChartSectionData(
-                      value: impuestos,
-                      color: Colors.redAccent,
-                      title: 'Impuestos\n${impuestos.toStringAsFixed(0)}€',
-                      radius: 50, // Un poco más pequeño para efecto estético
-                      titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
-                  sectionsSpace: 2, // Espacio entre quesitos
-                  centerSpaceRadius: 40, // Agujero del donut
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 30),
-
-            // --- SECCIÓN 2: detalle salario ---
+            // --- SECCIÓN SUPERIOR: TARJETAS (IZQ) + GRÁFICO (DER) ---
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _MoneyCard(title: "Salario Bruto", amount: bruto, color: Colors.grey)),
-                const SizedBox(width: 10),
-                Expanded(child: _MoneyCard(title: "Salario Neto", amount: neto, color: Colors.green)),
+                // 1. COLUMNA IZQUIERDA: Las Tarjetas Flotantes
+                Expanded(
+                  flex: 3, // Ocupa un poco menos de espacio que el gráfico
+                  child: Column(
+                    children: [
+                      _SummaryCard(
+                        title: "Salario Neto",
+                        amount: neto,
+                        color: colorScheme.secondary, // Verde/Esmeralda
+                        icon: Icons.wallet,
+                        isMain: true, // Esta será más grande/destacada
+                      ),
+                      const SizedBox(height: 12), // Aire entre tarjetas
+                      _SummaryCard(
+                        title: "Salario Bruto",
+                        amount: bruto,
+                        color: Colors.grey.shade700,
+                        icon: Icons.attach_money,
+                        isMain: false,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 20), // Aire horizontal
+
+                // 2. COLUMNA DERECHA: El Gráfico Donut
+                Expanded(
+                  flex: 4,
+                  child: SizedBox(
+                    height: 200, // Altura fija para el gráfico
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 0, // Sin huecos para look moderno
+                        centerSpaceRadius: 40,
+                        sections: [
+                          // Sección NETO (Verde)
+                          PieChartSectionData(
+                            value: neto,
+                            color: colorScheme.secondary,
+                            radius: 50,
+                            showTitle: false, // Minimalista: sin texto encima
+                          ),
+                          // Sección IMPUESTOS (Rojo suave)
+                          PieChartSectionData(
+                            value: impuestos,
+                            color: const Color(0xFFEF5350), // Rojo suave
+                            radius: 40, // Un poco más fino para efecto visual
+                            showTitle: false,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            // Leyenda pequeña debajo del gráfico (opcional, por claridad)
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _LegendItem(color: colorScheme.secondary, text: "Tú"),
+                const SizedBox(width: 15),
+                const _LegendItem(color: Color(0xFFEF5350), text: "Impuestos"),
+                const SizedBox(width: 20), // Margen derecho para alinear con gráfico
               ],
             ),
 
             const SizedBox(height: 30),
 
-            // --- SECCIÓN 3: Consejos ---
-            const Text("Análisis Legal", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            // --- SECCIÓN DESCRIPCIÓN ---
+            Text(
+              "Análisis Legal", 
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold, 
+                color: colorScheme.primary
+              )
+            ),
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue.shade100),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
               ),
-              child: Text(resumen, style: const TextStyle(fontSize: 16)),
+              child: Text(
+                resumen, 
+                style: const TextStyle(fontSize: 15, height: 1.5, color: Colors.black87)
+              ),
             ),
 
-            const SizedBox(height: 20),
-            const Text("Consejos Detectados", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 30),
+
+            // --- SECCIÓN CONSEJOS ---
+            Text(
+              "Consejos Inteligentes", 
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold, 
+                color: colorScheme.primary
+              )
+            ),
+            const SizedBox(height: 10),
             
-            ...consejos.map((consejo) => Card(
-              margin: const EdgeInsets.only(top: 10),
-              child: ListTile(
-                leading: const Icon(Icons.lightbulb_outline, color: Colors.orange),
-                title: Text(consejo),
+            ...consejos.map((consejo) => Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Card(
+                elevation: 0, // Diseño plano (Flat)
+                color: const Color(0xFFE8EAF6), // Azul muy muy clarito
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  leading: const Icon(Icons.lightbulb_outline_rounded, color: Colors.orange),
+                  title: Text(consejo, style: const TextStyle(fontSize: 14)),
+                ),
               ),
             )),
           ],
@@ -109,30 +168,81 @@ class ResultsScreen extends StatelessWidget{
   }
 }
 
-// Widget para no repetir código en las tarjetas de dinero
-class _MoneyCard extends StatelessWidget {
+// 🧱 Widget Auxiliar: Tarjeta de Resumen (Bruto/Neto)
+class _SummaryCard extends StatelessWidget {
   final String title;
   final double amount;
   final Color color;
+  final IconData icon;
+  final bool isMain;
 
-  const _MoneyCard({required this.title, required this.amount, required this.color});
+  const _SummaryCard({
+    required this.title,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    required this.isMain,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      width: double.infinity,
+      padding: EdgeInsets.all(isMain ? 16 : 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+        border: isMain ? Border.all(color: color.withOpacity(0.3), width: 1) : null,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.grey),
+              const SizedBox(width: 5),
+              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
           const SizedBox(height: 5),
-          Text("${amount.toStringAsFixed(2)}€", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            "${amount.toStringAsFixed(0)}€",
+            style: TextStyle(
+              fontSize: isMain ? 24 : 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// 🧱 Widget Auxiliar: Item de Leyenda (Bolita de color + texto)
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String text;
+  const _LegendItem({required this.color, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10, height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 5),
+        Text(text, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
     );
   }
 }
